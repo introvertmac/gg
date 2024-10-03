@@ -49,6 +49,11 @@ GlobalGear is a modern e-commerce platform built with Next.js, showcasing a coll
    AIRTABLE_TABLE_NAME=[Your Airtable Table Name]
    ```
 
+   Note: 
+   - For Portal API related variables (NEXT_PUBLIC_PORTAL_API_KEY, NEXT_PUBLIC_SOLANA_CHAIN_ID, NEXT_PUBLIC_SOLANA_RPC_URL), sign up at [Portal](https://www.portalhq.io/) to obtain the necessary credentials.
+   - For NEXT_PUBLIC_SOL_MINT and NEXT_PUBLIC_PYUSD_MINT, use the appropriate token mint addresses for SOL and PYUSD on the Solana network you're using (mainnet, devnet, or testnet).
+   - For Airtable related variables, sign up at [Airtable](https://airtable.com/) and create a base with the structure described in the "Airtable Structure" section below.
+
 4. Run the development server:
    ```bash
    npm run dev
