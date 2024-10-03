@@ -1,4 +1,4 @@
-# GlobalGear - E-commerce Project powered by Portal API, PYUSD and Solana 
+# GlobalGear - E-commerce Project with PYUSD and Solana 
 
 GlobalGear is a modern e-commerce platform built with Next.js, showcasing a collection of branded merchandise. This project demonstrates the integration of blockchain technology for payments using the Portal API, PYUSD stablecoin, and Solana blockchain.
 
