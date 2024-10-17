@@ -13,6 +13,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^0.10.1",
     "@react-oauth/google": "^0.12.1",
+    "@solana/actions": "^1.6.5",
     "@solana/spl-token": "^0.4.9",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-react": "^0.15.35",

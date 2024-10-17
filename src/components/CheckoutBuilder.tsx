@@ -9,6 +9,7 @@ import ProductInfoStep from './CheckoutSteps/ProductInfoStep';
 import PricingStep from './CheckoutSteps/PricingStep';
 import ContactInfoStep from './CheckoutSteps/ContactInfoStep';
 import SummaryStep from './CheckoutSteps/SummaryStep';
+import CheckoutCreatedModal from './CheckoutCreatedModal';
 
 interface CheckoutBuilderProps {
   onCancel: () => void;
@@ -51,6 +52,9 @@ export default function CheckoutBuilder({ onCancel }: CheckoutBuilderProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [checkoutPageId, setCheckoutPageId] = useState<number | null>(null);
 
   const steps = [
     { name: 'Store Info', component: StoreInfoStep },
@@ -130,7 +134,7 @@ export default function CheckoutBuilder({ onCancel }: CheckoutBuilderProps) {
         const productImageUrl = formData.productImage ? await uploadToCloudinary(formData.productImage) : null;
 
         // Create checkout page in the database
-        const checkoutPageId = await createCheckoutPage({
+        const newCheckoutPageId = await createCheckoutPage({
           storeName: formData.storeName,
           storeLogo: storeLogoUrl,
           productName: formData.productName,
@@ -142,8 +146,8 @@ export default function CheckoutBuilder({ onCancel }: CheckoutBuilderProps) {
           address: formData.address,
         });
 
-        // Redirect to the new checkout page
-        router.push(`/checkout/${checkoutPageId}`);
+        setCheckoutPageId(newCheckoutPageId);
+        setShowModal(true);
       } catch (error) {
         console.error('Error creating checkout page:', error);
         setSubmissionError('An error occurred while creating your checkout page. Please try again.');
@@ -202,6 +206,15 @@ export default function CheckoutBuilder({ onCancel }: CheckoutBuilderProps) {
           )}
         </button>
       </div>
+      {showModal && checkoutPageId && (
+        <CheckoutCreatedModal
+          checkoutPageId={checkoutPageId}
+          onClose={() => {
+            setShowModal(false);
+            onCancel();
+          }}
+        />
+      )}
     </div>
   );
 }

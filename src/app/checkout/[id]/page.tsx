@@ -100,7 +100,7 @@ function ErrorMessage({ message }: { message: string }) {
 }
 
 function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, sendTransaction, disconnect } = useWallet();
   const { connection } = useConnection();
   const { setVisible } = useWalletModal();
   const [copied, setCopied] = useState(false);
@@ -109,7 +109,11 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
   const [transactionSuccess, setTransactionSuccess] = useState(false);
 
   const handleWalletAction = async () => {
-    setVisible(true);
+    if (publicKey) {
+      await disconnect();
+    } else {
+      setVisible(true);
+    }
   };
 
   const copyToClipboard = async (text: string) => {
@@ -167,6 +171,12 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
         transaction.add(createSellerATAInstruction);
       }
 
+      // Check buyer's USDC balance
+      const buyerBalance = await connection.getTokenAccountBalance(buyerTokenAccount);
+      if (BigInt(buyerBalance.value.amount) < amount) {
+        throw new Error("Insufficient USDC balance");
+      }
+
       // Add transfer instruction
       const transferInstruction = createTransferInstruction(
         buyerTokenAccount,
@@ -193,7 +203,7 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
 
       // If simulation is successful, send the transaction
       const signature = await sendTransaction(transaction, connection);
-      
+
       // Wait for confirmation
       const confirmation = await connection.confirmTransaction({
         signature,
