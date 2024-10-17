@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GlobalGear - Solana Checkout for Global Commerce
+
+GlobalGear is a Next.js-based web application that provides a seamless, secure, and lightning-fast checkout experience for global businesses using Solana blockchain technology.
+
+## Features
+
+- User authentication with Google OAuth
+- Dashboard for managing checkout pages
+- Creation of custom checkout pages
+- Solana wallet integration for payments
+- Multi-currency support
+- Responsive design for various devices
+
+## Technologies Used
+
+- Next.js 14
+- React 18
+- TypeScript
+- Tailwind CSS
+- Solana Web3.js
+- Solana Wallet Adapter
+- Drizzle ORM
+- Neon Database (PostgreSQL)
+- Cloudinary (for image storage)
+- Axios (for API requests)
+- React Icons
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+- Node.js (v14 or later)
+- npm or yarn
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/globalgear.git
+   cd globalgear
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. Set up environment variables:
+   Create a `.env.local` file in the root directory and add the following variables:
+
+   ```
+   NEXT_PUBLIC_DATABASE_URL=your_neon_database_url
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   OKTO_API_URL=https://sandbox-api.okto.tech/api/v1
+   ```
+
+   Replace the placeholder values with your actual credentials.
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Database Migration
+
+To set up the database schema, run the migration script:
 
 ```bash
-npm run dev
+npm run migrate
 # or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+yarn migrate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
+## Deployment
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Check out the [Next.js deployment documentation](
