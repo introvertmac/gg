@@ -18,10 +18,11 @@ import {
   getAccount
 } from "@solana/spl-token";
 
-// Correct Devnet USDC token address
-const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+// Update the USDC mint address constant
+const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
-const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+// Update the connection to use mainnet
+const connection = new Connection(process.env.NEXT_PUBLIC_QUICKNODE_RPC_URL || 'https://api.mainnet-beta.solana.com', 'confirmed');
 
 export const GET = async (req: Request) => {
   const url = new URL(req.url);

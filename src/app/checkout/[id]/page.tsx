@@ -57,9 +57,9 @@ export default function CheckoutPage() {
     }
   };
 
-  // Set up Solana wallet adapter for Devnet
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  // Set up Solana wallet adapter for mainnet
+  const network = WalletAdapterNetwork.Mainnet;
+  const endpoint = process.env.NEXT_PUBLIC_QUICKNODE_RPC_URL || clusterApiUrl(network);
   const wallets = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     [network]
@@ -136,8 +136,8 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
     setTransactionError(null);
 
     try {
-      // USDC token mint address on devnet
-      const usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+      // USDC token mint address on mainnet
+      const usdcMint = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
       
       // Convert price to USDC amount (6 decimals)
       const amount = BigInt(Math.round(parseFloat(pageData.productPrice) * 1_000_000));
