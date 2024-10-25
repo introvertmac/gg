@@ -15,7 +15,14 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { getAssociatedTokenAddress, createTransferInstruction, TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
+import { 
+  getAssociatedTokenAddress, 
+  createTransferInstruction, 
+  TOKEN_PROGRAM_ID, 
+  createAssociatedTokenAccountInstruction,
+  getAccount,
+  Account
+} from "@solana/spl-token";
 
 // Make sure to import the required CSS for the wallet adapter
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -145,16 +152,27 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
       // Get token accounts for buyer and seller
       const buyerTokenAccount = await getAssociatedTokenAddress(
         usdcMint,
-        publicKey,
-        true  // Changed to true to allow off-curve addresses
+        publicKey
       );
       
       const sellerPublicKey = new PublicKey(pageData.walletAddress);
       const sellerTokenAccount = await getAssociatedTokenAddress(
         usdcMint,
-        sellerPublicKey,
-        true  // Changed to true to allow off-curve addresses
+        sellerPublicKey
       );
+
+      // Verify buyer has enough USDC
+      try {
+        const buyerAccount: Account = await getAccount(connection, buyerTokenAccount);
+        if (BigInt(buyerAccount.amount.toString()) < amount) {
+          throw new Error("Insufficient USDC balance");
+        }
+      } catch (error: any) {
+        if (error.name === 'TokenAccountNotFoundError') {
+          throw new Error("No USDC account found. Please make sure you have USDC in your wallet.");
+        }
+        throw new Error("Failed to verify USDC balance. Make sure you have enough USDC.");
+      }
 
       // Create new transaction
       const transaction = new Transaction();
@@ -164,18 +182,6 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
         connection.getAccountInfo(buyerTokenAccount),
         connection.getAccountInfo(sellerTokenAccount)
       ]);
-
-      // Create buyer's token account if it doesn't exist
-      if (!buyerAccountInfo) {
-        console.log("Creating buyer's token account");
-        const createBuyerATAIx = createAssociatedTokenAccountInstruction(
-          publicKey,
-          buyerTokenAccount,
-          publicKey,
-          usdcMint
-        );
-        transaction.add(createBuyerATAIx);
-      }
 
       // Create seller's token account if it doesn't exist
       if (!sellerAccountInfo) {
@@ -198,32 +204,27 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
       );
       transaction.add(transferIx);
 
-      // Get latest blockhash and set transaction properties
+      // Get latest blockhash
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
       // Send and confirm transaction
-      try {
-        const signature = await sendTransaction(transaction, connection);
-        console.log("Transaction sent:", signature);
+      const signature = await sendTransaction(transaction, connection);
+      console.log("Transaction sent:", signature);
 
-        const confirmation = await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight
-        });
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight
+      });
 
-        if (confirmation.value.err) {
-          throw new Error("Transaction failed to confirm");
-        }
-
-        setTransactionSuccess(true);
-        console.log("Transaction successful:", signature);
-      } catch (err) {
-        console.error("Transaction error:", err);
-        throw new Error("Failed to send transaction");
+      if (confirmation.value.err) {
+        throw new Error("Transaction failed to confirm");
       }
+
+      setTransactionSuccess(true);
+      console.log("Transaction successful:", signature);
     } catch (error) {
       console.error("Transaction failed:", error);
       setTransactionError(error instanceof Error ? error.message : "Transaction failed");

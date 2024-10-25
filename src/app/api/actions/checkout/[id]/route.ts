@@ -103,36 +103,16 @@ export const POST = async (req: Request) => {
       // Get token accounts
       const buyerTokenAccount = await getAssociatedTokenAddress(
         USDC_MINT,
-        buyerPublicKey,
-        true // Allow off-curve addresses
+        buyerPublicKey
       );
 
       const sellerTokenAccount = await getAssociatedTokenAddress(
         USDC_MINT,
-        sellerPublicKey,
-        true // Allow off-curve addresses
+        sellerPublicKey
       );
 
-      console.log(`Buyer token account: ${buyerTokenAccount.toBase58()}`);
-      console.log(`Seller token account: ${sellerTokenAccount.toBase58()}`);
-
-      // Check and create token accounts if necessary
-      const [buyerAccountInfo, sellerAccountInfo] = await Promise.all([
-        connection.getAccountInfo(buyerTokenAccount),
-        connection.getAccountInfo(sellerTokenAccount)
-      ]);
-
-      if (!buyerAccountInfo) {
-        console.log("Adding instruction to create buyer's token account");
-        transaction.add(
-          createAssociatedTokenAccountInstruction(
-            buyerPublicKey, // payer
-            buyerTokenAccount, // ata
-            buyerPublicKey, // owner
-            USDC_MINT // mint
-          )
-        );
-      }
+      // Check if seller account exists and create if necessary
+      const sellerAccountInfo = await connection.getAccountInfo(sellerTokenAccount);
 
       if (!sellerAccountInfo) {
         console.log("Adding instruction to create seller's token account");
