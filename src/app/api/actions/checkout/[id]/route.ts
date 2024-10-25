@@ -95,54 +95,52 @@ export const POST = async (req: Request) => {
 
     console.log(`Creating transaction for ${amount} USDC from ${buyerPublicKey.toBase58()} to ${sellerPublicKey.toBase58()}`);
 
-    let transaction = new Transaction();
-
     try {
-      const buyerTokenAccount = await getAssociatedTokenAddress(USDC_MINT, buyerPublicKey);
-      const sellerTokenAccount = await getAssociatedTokenAddress(USDC_MINT, sellerPublicKey);
+      // Create new transaction
+      const transaction = new Transaction();
+
+      // Get token accounts
+      const buyerTokenAccount = await getAssociatedTokenAddress(
+        USDC_MINT,
+        buyerPublicKey,
+        true // Allow off-curve addresses
+      );
+
+      const sellerTokenAccount = await getAssociatedTokenAddress(
+        USDC_MINT,
+        sellerPublicKey,
+        true // Allow off-curve addresses
+      );
 
       console.log(`Buyer token account: ${buyerTokenAccount.toBase58()}`);
       console.log(`Seller token account: ${sellerTokenAccount.toBase58()}`);
 
-      // Check if buyer has enough USDC
-      try {
-        const buyerAccount = await getAccount(connection, buyerTokenAccount);
-        console.log(`Buyer USDC balance: ${buyerAccount.amount}`);
-        if (BigInt(buyerAccount.amount) < amount) {
-          throw new Error("Insufficient USDC balance");
-        }
-      } catch (error) {
-        console.error("Error checking buyer USDC balance:", error);
-        if (error instanceof Error && error.message.includes("could not find account")) {
-          console.log("Buyer token account does not exist, will be created in the transaction");
-        } else {
-          throw new Error("Failed to verify USDC balance");
-        }
-      }
-
       // Check and create token accounts if necessary
-      const buyerAccountInfo = await connection.getAccountInfo(buyerTokenAccount);
+      const [buyerAccountInfo, sellerAccountInfo] = await Promise.all([
+        connection.getAccountInfo(buyerTokenAccount),
+        connection.getAccountInfo(sellerTokenAccount)
+      ]);
+
       if (!buyerAccountInfo) {
-        console.log("Creating buyer associated token account");
+        console.log("Adding instruction to create buyer's token account");
         transaction.add(
           createAssociatedTokenAccountInstruction(
-            buyerPublicKey,
-            buyerTokenAccount,
-            buyerPublicKey,
-            USDC_MINT
+            buyerPublicKey, // payer
+            buyerTokenAccount, // ata
+            buyerPublicKey, // owner
+            USDC_MINT // mint
           )
         );
       }
 
-      const sellerAccountInfo = await connection.getAccountInfo(sellerTokenAccount);
       if (!sellerAccountInfo) {
-        console.log("Creating seller associated token account");
+        console.log("Adding instruction to create seller's token account");
         transaction.add(
           createAssociatedTokenAccountInstruction(
-            buyerPublicKey,
-            sellerTokenAccount,
-            sellerPublicKey,
-            USDC_MINT
+            buyerPublicKey, // payer
+            sellerTokenAccount, // ata
+            sellerPublicKey, // owner
+            USDC_MINT // mint
           )
         );
       }
@@ -151,38 +149,35 @@ export const POST = async (req: Request) => {
       console.log("Adding transfer instruction");
       transaction.add(
         createTransferInstruction(
-          buyerTokenAccount,
-          sellerTokenAccount,
-          buyerPublicKey,
-          amount,
-          [],
-          TOKEN_PROGRAM_ID
+          buyerTokenAccount, // source
+          sellerTokenAccount, // destination
+          buyerPublicKey, // owner
+          amount // amount
         )
       );
 
-      const { blockhash } = await connection.getLatestBlockhash();
+      // Get latest blockhash
+      const { blockhash } = await connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = buyerPublicKey;
 
-      // Log the complete transaction for debugging
-      console.log("Complete transaction:", JSON.stringify(transaction, null, 2));
-
+      // Create the payload
       const payload: ActionPostResponse = await createPostResponse({
         fields: {
           type: 'transaction',
-          transaction,
+          transaction: transaction,
           message: `Purchase of ${pageData.productName} for $${pageData.productPrice} USDC`,
         },
       });
 
       console.log("Transaction created successfully");
-
       return NextResponse.json(payload, {
         headers: {
           ...ACTIONS_CORS_HEADERS,
           'Access-Control-Allow-Origin': '*',
         },
       });
+
     } catch (error) {
       console.error("Error creating transaction:", error);
       return NextResponse.json(
@@ -190,21 +185,30 @@ export const POST = async (req: Request) => {
           error: "Failed to create transaction", 
           details: error instanceof Error ? error.message : String(error) 
         },
-        { status: 500, headers: {
-          ...ACTIONS_CORS_HEADERS,
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
+        { 
+          status: 500, 
+          headers: {
+            ...ACTIONS_CORS_HEADERS,
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
   } catch (error) {
     console.error("Error in POST request:", error);
     return NextResponse.json(
-      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
-      { status: 500, headers: {
-        ...ACTIONS_CORS_HEADERS,
-        'Access-Control-Allow-Origin': '*',
+      { 
+        error: "Internal server error", 
+        details: error instanceof Error ? error.message : String(error) 
       },
-    });
+      { 
+        status: 500, 
+        headers: {
+          ...ACTIONS_CORS_HEADERS,
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   }
 };
 

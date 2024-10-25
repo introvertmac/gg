@@ -128,7 +128,7 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
 
   const handlePayNow = async () => {
     if (!publicKey || !connection) {
-      setTransactionError("Wallet not connected");
+      setTransactionError("Please connect your wallet first");
       return;
     }
 
@@ -136,90 +136,97 @@ function CheckoutPageContent({ pageData }: { pageData: CheckoutPageData }) {
     setTransactionError(null);
 
     try {
+      // USDC token mint address on devnet
       const usdcMint = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
-      const amount = BigInt(Math.round(parseFloat(pageData.productPrice) * 1_000_000)); // USDC has 6 decimal places
+      
+      // Convert price to USDC amount (6 decimals)
+      const amount = BigInt(Math.round(parseFloat(pageData.productPrice) * 1_000_000));
 
-      const buyerTokenAccount = await getAssociatedTokenAddress(usdcMint, publicKey);
+      // Get token accounts for buyer and seller
+      const buyerTokenAccount = await getAssociatedTokenAddress(
+        usdcMint,
+        publicKey,
+        true  // Changed to true to allow off-curve addresses
+      );
+      
       const sellerPublicKey = new PublicKey(pageData.walletAddress);
-      const sellerTokenAccount = await getAssociatedTokenAddress(usdcMint, sellerPublicKey);
+      const sellerTokenAccount = await getAssociatedTokenAddress(
+        usdcMint,
+        sellerPublicKey,
+        true  // Changed to true to allow off-curve addresses
+      );
 
-      let transaction = new Transaction();
+      // Create new transaction
+      const transaction = new Transaction();
 
-      // Check if buyer's token account exists, if not, create it
-      const buyerAccountInfo = await connection.getAccountInfo(buyerTokenAccount);
+      // Check if accounts exist and create if necessary
+      const [buyerAccountInfo, sellerAccountInfo] = await Promise.all([
+        connection.getAccountInfo(buyerTokenAccount),
+        connection.getAccountInfo(sellerTokenAccount)
+      ]);
+
+      // Create buyer's token account if it doesn't exist
       if (!buyerAccountInfo) {
-        console.log("Creating associated token account for buyer");
-        const createBuyerATAInstruction = createAssociatedTokenAccountInstruction(
+        console.log("Creating buyer's token account");
+        const createBuyerATAIx = createAssociatedTokenAccountInstruction(
           publicKey,
           buyerTokenAccount,
           publicKey,
           usdcMint
         );
-        transaction.add(createBuyerATAInstruction);
+        transaction.add(createBuyerATAIx);
       }
 
-      // Check if seller's token account exists, if not, create it
-      const sellerAccountInfo = await connection.getAccountInfo(sellerTokenAccount);
+      // Create seller's token account if it doesn't exist
       if (!sellerAccountInfo) {
-        console.log("Creating associated token account for seller");
-        const createSellerATAInstruction = createAssociatedTokenAccountInstruction(
+        console.log("Creating seller's token account");
+        const createSellerATAIx = createAssociatedTokenAccountInstruction(
           publicKey,
           sellerTokenAccount,
           sellerPublicKey,
           usdcMint
         );
-        transaction.add(createSellerATAInstruction);
-      }
-
-      // Check buyer's USDC balance
-      const buyerBalance = await connection.getTokenAccountBalance(buyerTokenAccount);
-      if (BigInt(buyerBalance.value.amount) < amount) {
-        throw new Error("Insufficient USDC balance");
+        transaction.add(createSellerATAIx);
       }
 
       // Add transfer instruction
-      const transferInstruction = createTransferInstruction(
+      const transferIx = createTransferInstruction(
         buyerTokenAccount,
         sellerTokenAccount,
         publicKey,
-        amount,
-        [],
-        TOKEN_PROGRAM_ID
+        amount
       );
-      transaction.add(transferInstruction);
+      transaction.add(transferIx);
 
-      // Get the latest blockhash
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      // Get latest blockhash and set transaction properties
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = publicKey;
 
-      // Simulate the transaction
-      const simulation = await connection.simulateTransaction(transaction);
+      // Send and confirm transaction
+      try {
+        const signature = await sendTransaction(transaction, connection);
+        console.log("Transaction sent:", signature);
 
-      if (simulation.value.err) {
-        console.error("Transaction simulation failed:", simulation.value.logs);
-        throw new Error("Transaction simulation failed: " + JSON.stringify(simulation.value.err));
+        const confirmation = await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight
+        });
+
+        if (confirmation.value.err) {
+          throw new Error("Transaction failed to confirm");
+        }
+
+        setTransactionSuccess(true);
+        console.log("Transaction successful:", signature);
+      } catch (err) {
+        console.error("Transaction error:", err);
+        throw new Error("Failed to send transaction");
       }
-
-      // If simulation is successful, send the transaction
-      const signature = await sendTransaction(transaction, connection);
-
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      });
-
-      if (confirmation.value.err) {
-        throw new Error("Transaction failed to confirm");
-      }
-
-      console.log("Transaction successful:", signature);
-      setTransactionSuccess(true);
     } catch (error) {
       console.error("Transaction failed:", error);
-      setTransactionError((error as Error).message || "An unknown error occurred");
+      setTransactionError(error instanceof Error ? error.message : "Transaction failed");
     } finally {
       setIsProcessing(false);
     }
